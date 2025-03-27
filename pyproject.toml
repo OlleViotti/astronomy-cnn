@@ -1,0 +1,35 @@
+[project]
+name = "astronomy-cnn"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Olle Viotti",email = "olle.viotti@svk.se"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+
+[[tool.poetry.source]]
+name = "artifactory-trans"
+# url = "https://artifactory-trans.svk.local/artifactory/api/pypi/files.pythonhosted.org-pypi/simple"
+url = "https://artifactory-trans.svk.local:443/artifactory/api/pypi/data-science-files.pythonhosted.org-pypi/simple"
+priority = "primary"
+
+[[tool.poetry.source]]
+name = "artifactory-trans-publish"
+url = "https://artifactory-trans.svk.local/artifactory/api/pypi/data-science-pypi-test-local/simple"
+priority = "supplemental"
+
+[tool.poetry.dependencies]
+pandas = ">=2.2.3,<3.0.0"
+numpy = ">=2.2.4,<3.0.0"
+torch = ">=2.6.0,<3.0.0"
+huggingface-hub = ">=0.29.3,<0.30.0"
+matplotlib = ">=3.10.1,<4.0.0"
+tqdm = ">=4.67.1,<5.0.0"
+tensorboard = "^2.19.0"
+scikit-learn = "^1.6.1"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
