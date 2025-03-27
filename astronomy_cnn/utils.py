@@ -1,7 +1,8 @@
 from huggingface_hub import hf_hub_download
 import numpy as np
 import matplotlib.pyplot as plt
-import torch
+import torch  # export LD_LIBRARY_PATH=.venv/lib/python3.11/site-packages/nvidia/cudnn/lib:.venv/lib/python3.11/site-packages/cusparselt/lib:.venv/lib/python3.11/site-packages/nvidia/nccl/lib:${LD_LIBRARY_PATH}
+
 import os
 from sklearn.preprocessing import QuantileTransformer
 
@@ -37,6 +38,9 @@ def load_data(data_dir):
     labels = torch.tensor(labels).float()
     return spectra, labels
 
+def filter_data(spectra, labels):
+    idx = (spectra != 0.).all(1)
+    return spectra[idx], labels[idx]
 
 def normalize_spectra(spectra):
     "Normalize spectra using logarithm"
@@ -74,8 +78,9 @@ def plot_spectra(spectra, labels, label_names, idx=0):
     fig.savefig(f"./plots/spectra_{idx}.pdf", dpi=600)
 
 
-def plot_spectra_imshow(spectra, idx=range(100)):
+def plot_spectra_imshow(spectra, num_spectra=100):
     "Plot several spectra as a grid"
+    idx=np.random.choice(spectra.shape[0], num_spectra)
     fig, ax = plt.subplots(figsize=(10, 5))
     im = ax.imshow(spectra[idx, :], cmap="viridis", aspect="auto")
     ax.set_xlabel("Wavelength [index]")
@@ -116,6 +121,7 @@ def get_num_workers(save_n=0):
 
 def get_data(device=None, label_names=["mass", "age", "l_bol", "dist", "t_eff", "log_g", "fe_h", "SNR"]):
     spectra, labels = load_data(data_dir)
+    spectra, labels = filter_data(spectra, labels)
     spectra_norm = normalize_spectra(spectra)
     labels, label_names = subset_labels(labels, label_names)
     # This commented out code is good for some of the other labels that we do not consider here.
@@ -127,7 +133,7 @@ def get_data(device=None, label_names=["mass", "age", "l_bol", "dist", "t_eff", 
     return spectra, labels, spectra_norm, labels_norm, label_names
 
 def generate_plots():
-    spectra, labels, spectra_norm, labels_norm, label_names = get_data('cpu')
+    spectra, labels, spectra_norm, labels_norm, label_names = get_data('cpu', label_names=["t_eff","log_g","fe_h"])
 
     # Generate plots for 5 random spectra
     for i in np.random.choice(spectra.shape[0], 5):
@@ -136,6 +142,39 @@ def generate_plots():
     plot_label_hist(labels_norm, label_names, suffix='normalized')
     plot_label_hist(labels, label_names)
     
+
+
+# Early stopping class implementation
+class EarlyStopping:
+    def __init__(self, patience=5, verbose=False, delta=0):
+        """
+        Args:
+            patience (int): How many epochs to wait after last time validation loss improved.
+            verbose (bool): If True, prints a message for each validation loss improvement.
+            delta (float): Minimum change in the monitored quantity to qualify as an improvement.
+        """
+        self.patience = patience
+        self.verbose = verbose
+        self.delta = delta
+        self.counter = 0
+        self.best_loss = None
+        self.early_stop = False
+
+    def __call__(self, val_loss):
+        if self.best_loss is None:
+            self.best_loss = val_loss
+            if self.verbose:
+                print(f"Initial validation loss: {val_loss:.4f}")
+        elif val_loss > self.best_loss - self.delta:
+            self.counter += 1
+            if self.verbose:
+                print(f"EarlyStopping counter: {self.counter} out of {self.patience}")
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_loss = val_loss
+            self.counter = 0
+
 
 if __name__ == "__main__":
     generate_plots()
